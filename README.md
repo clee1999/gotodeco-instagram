@@ -13,13 +13,16 @@ Dans *Settings → Secrets and variables → Actions* du dépôt :
 
 | Secret | Contenu |
 |---|---|
-| `IG_ACCESS_TOKEN` | code d'accès Instagram longue durée (application Meta) |
-| `IG_USER_ID` | identifiant Instagram du compte GoToDeco |
-| `GH_PAT` | jeton GitHub à granularité fine, accès *Secrets : lecture et écriture* sur ce dépôt (sert au renouvellement automatique du code Instagram) |
+| `IG_ACCESS_TOKEN` | code d'accès généré dans l'app Meta (*Cas d'utilisation → API Instagram → API setup with Unified login → Générer un token*) |
+| `IG_USER_ID` | identifiant Instagram du compte GoToDeco : `17841479666284999` |
+| `GH_PAT` | seulement si le code commence par `IGAA` (il expire alors au bout de 60 jours) : jeton GitHub à granularité fine, accès *Secrets : lecture et écriture* sur ce dépôt, pour le renouvellement automatique |
+
+Un code qui commence par `EAA` (connexion unifiée, utilisateur système) n'expire pas : `GH_PAT` est inutile.
 
 Le dépôt doit rester **public** : Instagram va chercher les images à une adresse publique.
 Les secrets, eux, ne sont jamais visibles.
 
 ## Tester
 
-*Actions → Publier sur Instagram → Run workflow* lance une vérification immédiate.
+*Actions → Publier sur Instagram → Run workflow* lance une vérification immédiate :
+le journal doit afficher `Compte Instagram : @gotodeco`. Sinon, le code ou l'identifiant est faux.

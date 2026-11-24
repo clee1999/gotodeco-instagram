@@ -1,7 +1,8 @@
 name: Renouveler le code d'accès Instagram
 
-# Le code d'accès Instagram expire au bout de 60 jours.
-# Ce robot le renouvelle deux fois par mois et met à jour le secret.
+# Un code Instagram (IGAA…) expire au bout de 60 jours : ce robot le renouvelle
+# deux fois par mois et met à jour le secret. Un code Facebook d'utilisateur
+# système (EAA…, connexion unifiée) n'expire pas : le robot ne fait alors rien.
 on:
   schedule:
     - cron: "0 4 1,15 * *"
@@ -17,6 +18,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           set -euo pipefail
+          case "$IG_ACCESS_TOKEN" in
+            IG*) ;;
+            *) echo "Code Facebook sans expiration : rien à renouveler."; exit 0 ;;
+          esac
           resp=$(curl -sS --fail-with-body \
             "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${IG_ACCESS_TOKEN}")
           new=$(echo "$resp" | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')

@@ -13,8 +13,11 @@ Format d'une entrée de file d'attente (queue/<id>.json) :
 }
 
 Variables d'environnement :
-  IG_ACCESS_TOKEN   (secret)  code d'accès Instagram longue durée
-  IG_USER_ID        (secret, optionnel)  identifiant du compte ; sinon lu via /me
+  IG_ACCESS_TOKEN   (secret)  code d'accès : soit un code Instagram (commence par IGAA,
+                    passe par graph.instagram.com), soit un code Facebook d'utilisateur
+                    système issu de la connexion unifiée (commence par EAA, graph.facebook.com)
+  IG_USER_ID        (secret)  identifiant du compte Instagram ; obligatoire avec un code EAA,
+                    lu via /me sinon
   PUBLIC_BASE_URL   (optionnel) URL publique de la racine du dépôt
   IG_API_VERSION    (optionnel) ex. v24.0
   DRY_RUN=1         n'appelle pas Instagram, affiche ce qui serait publié
@@ -25,8 +28,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 QUEUE, DONE, FAILED = ROOT / "queue", ROOT / "published", ROOT / "failed"
-API = f"https://graph.instagram.com/{os.environ.get('IG_API_VERSION', 'v24.0')}"
-TOKEN = os.environ.get("IG_ACCESS_TOKEN", "")
+TOKEN = os.environ.get("IG_ACCESS_TOKEN", "").strip()
+IG_TOKEN = TOKEN.startswith("IG")                # code Instagram ; sinon code Facebook (EAA…)
+HOST = "graph.instagram.com" if IG_TOKEN else "graph.facebook.com"
+API = f"https://{HOST}/{os.environ.get('IG_API_VERSION', 'v24.0')}"
 DRY = os.environ.get("DRY_RUN") == "1"
 MAX_ATTEMPTS = 3
 MAX_LATENESS = timedelta(hours=24)   # au-delà, la publication est abandonnée
@@ -105,7 +110,17 @@ def main():
         sys.exit("IG_ACCESS_TOKEN manquant.")
     now = datetime.now(timezone.utc)
     base = public_base()
-    user_id = os.environ.get("IG_USER_ID") or ("me" if DRY else call("GET", "me", {"fields": "user_id"})["user_id"])
+    user_id = os.environ.get("IG_USER_ID", "").strip()
+    if not user_id:
+        if DRY:
+            user_id = "me"
+        elif IG_TOKEN:
+            user_id = call("GET", "me", {"fields": "user_id"})["user_id"]
+        else:
+            sys.exit("IG_USER_ID manquant (obligatoire avec un code Facebook EAA…).")
+    if not DRY:                               # vérifie le code à chaque passage
+        account = call("GET", user_id, {"fields": "username"})
+        print(f"Compte Instagram : @{account.get('username')} (via {HOST})")
     errors = 0
     for path in sorted(QUEUE.glob("*.json")):
         entry = json.loads(path.read_text())

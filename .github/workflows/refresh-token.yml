@@ -1,0 +1,25 @@
+name: Renouveler le code d'accès Instagram
+
+# Le code d'accès Instagram expire au bout de 60 jours.
+# Ce robot le renouvelle deux fois par mois et met à jour le secret.
+on:
+  schedule:
+    - cron: "0 4 1,15 * *"
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Renouveler et enregistrer le code
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          set -euo pipefail
+          resp=$(curl -sS --fail-with-body \
+            "https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${IG_ACCESS_TOKEN}")
+          new=$(echo "$resp" | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')
+          echo "::add-mask::$new"
+          gh secret set IG_ACCESS_TOKEN --body "$new" --repo "$GITHUB_REPOSITORY"
+          echo "Code d'accès renouvelé."

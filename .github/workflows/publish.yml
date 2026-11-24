@@ -15,6 +15,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: secrets       # les secrets IG_* sont dans l'environnement « secrets »
     steps:
       - uses: actions/checkout@v5
 

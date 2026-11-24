@@ -11,6 +11,7 @@ on:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    environment: secrets       # les secrets IG_* sont dans l'environnement « secrets »
     steps:
       - name: Renouveler et enregistrer le code
         env:
